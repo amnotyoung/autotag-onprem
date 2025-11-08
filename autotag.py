@@ -20,11 +20,12 @@ assert torch.cuda.is_available(), "❌ GPU 런타임이 아닙니다!"
 print(f"✅ GPU: {torch.cuda.get_device_name(0)}")
 print(f"✅ VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f}GB")
 
-!pip install -q pdfplumber gradio sentence-transformers huggingface-hub
-!pip install -q llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
-!pip install -q pandas numpy
+# 패키지 설치는 Colab 노트북에서 별도로 실행하세요:
+# !pip install -q pdfplumber gradio sentence-transformers huggingface-hub
+# !pip install -q llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+# !pip install -q pandas numpy
 
-print("\n✅ 패키지 설치 완료!\n")
+print("\n✅ GPU 확인 완료! 패키지가 설치되어 있는지 확인 중...\n")
 
 from huggingface_hub import hf_hub_download
 from llama_cpp import Llama
