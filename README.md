@@ -15,13 +15,51 @@ KOICA 사업 문서 자동 검토 시스템 (Technical Appraisal Guide)
 
 ### 로컬에서 실행
 
-```bash
-# 코드 다운로드
-wget https://raw.githubusercontent.com/amnotyoung/autotag/claude/fix-solar-analysis-rainy-season-011CUv6NG6frc4X4LBy2vEBd/autotag.py
+#### 자동 설치 (권장)
 
-# 실행
-python autotag.py
+**Linux/macOS**:
+```bash
+chmod +x setup.sh
+./setup.sh
 ```
+
+**Windows**:
+```bash
+setup.bat
+```
+
+#### 수동 설치
+
+1. **환경 설정**:
+   ```bash
+   # 가상 환경 생성
+   python3 -m venv koica-env
+
+   # 가상 환경 활성화
+   ## Linux/macOS:
+   source koica-env/bin/activate
+   ## Windows:
+   koica-env\Scripts\activate
+   ```
+
+2. **패키지 설치**:
+   ```bash
+   # PyTorch (CUDA 12.1)
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+   # llama-cpp-python (CUDA 지원)
+   pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+
+   # 나머지 패키지
+   pip install -r requirements.txt
+   ```
+
+3. **실행**:
+   ```bash
+   python autotag.py
+   ```
+
+📘 **상세 가이드**: [LOCAL_SETUP.md](LOCAL_SETUP.md) 참고
 
 ## 🔧 v3.1 핵심 개선
 
