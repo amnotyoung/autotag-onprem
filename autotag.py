@@ -1,12 +1,13 @@
 # ==============================================
-# KOICA TAG v3.1 - 예시 복사 방지 강화
+# KOICA TAG v4.0 - 섹터 전문가 집중
 # ==============================================
 #
-# 🔧 v3.1 핵심 개선:
-# 1. Few-shot 예시를 형식 가이드로 변경 (구체적 내용 제거)
-# 2. "예시 내용 복사 절대 금지" 명시적 지시 추가
-# 3. 예시 복사 검증 로직 추가 (태양광, 디젤 등 키워드 검출)
-# 4. 프롬프트에서 "참고 문서 실제 내용만 사용" 강조
+# 🔥 v4.0 주요 변경:
+# 1. PMC Agent 제거 → LLM 호출 6회 → 1회로 대폭 축소
+# 2. 섹터 전문가 분석만 집중 → 섹터별 핵심 이슈 + 필수 질문 빡세게 검토
+# 3. 처리 속도 대폭 향상 → Agent 부담 감소로 약 5~6배 빠름
+# 4. 검토 품질 강화 → 섹터 전문성에 집중한 심층 분석
+# 5. AI 정신 차림 → 한 번에 하나의 역할만 수행
 # ==============================================
 
 import torch
@@ -496,25 +497,49 @@ PROJECT_MANAGER_PROMPT = """당신은 KOICA 프로젝트 관리 전문가(PMC)�
 
 def get_sector_expert_prompt(sector: str) -> str:
     if sector not in KOICA_SECTORS:
-        return PROJECT_MANAGER_PROMPT
-    
+        return TAG_SYSTEM_PROMPT
+
     sector_info = KOICA_SECTORS[sector]
-    
-    return f"""당신은 KOICA {sector} 분야 전문가입니다.
 
-# 전문 분야
-{sector} 섹터 국제개발협력
+    return f"""당신은 KOICA {sector} 분야 최고 전문가입니다.
 
-# 핵심 검토 이슈
-{chr(10).join([f'{i+1}. {issue}' for i, issue in enumerate(sector_info['core_issues'])])}
+# 🎯 전문 역할
+- **분야**: {sector} 섹터 국제개발협력 전문가
+- **임무**: 사업 문서를 **철저히 검토**하고 **구체적이고 실행 가능한** 권고사항 도출
+- **기준**: 국제 모범 사례, KOICA 기준, SDGs 정합성
 
-# 필수 검토 질문
-{chr(10).join([f'- {q}' for q in sector_info['critical_questions']])}
+# 📋 핵심 검토 이슈 ({len(sector_info['core_issues'])}개)
+{chr(10).join([f'{i+1}. **{issue}**' for i, issue in enumerate(sector_info['core_issues'])])}
 
-# CRITICAL 지침
-- 실제 내용으로 작성
-- 플레이스홀더 사용 금지
-- 권고사항 필수 포함"""
+# ❓ 필수 검토 질문 ({len(sector_info['critical_questions'])}개)
+{chr(10).join([f'{i+1}. {q}' for i, q in enumerate(sector_info['critical_questions'])])}
+
+# 🔥 CRITICAL 분석 원칙
+
+## 깊이 있는 검토
+- 단순 확인이 아닌 **비판적 분석** 필수
+- 문서의 **논리적 일관성, 실행 가능성, 위험 요인** 모두 검토
+- **정량적 데이터** 활용 (%, 금액, 인원, 기간 등)
+- 문서에서 **누락된 중요 사항** 반드시 지적
+
+## 구체적 권고사항
+- 모든 문제점에 대해 **즉시 조치 + 단기 조치** 제시
+- 조치마다 **예산 규모, 담당 기관, 실행 기간** 명시
+- **측정 가능한 개선 목표** 설정 (예: "접근성 30% 향상", "비용 20% 절감")
+
+## 절대 금지
+- [질문], [구체적], [페이지], [금액], [조직] 같은 플레이스홀더 사용
+- 참고 문서에 없는 내용 임의로 만들기
+- 형식 예시의 내용(태양광, 디젤 등) 복사
+- 근거 없는 평가 (반드시 페이지 번호 + 인용문 포함)
+
+## 필수 요구사항
+- 모든 이슈와 질문에 대해 **권고사항 필수** 작성
+- **실제 페이지 번호 + 실제 인용문** 반드시 포함
+- 논리적 일관성 유지 (✅충분 → 🔴Critical 불가)
+- 섹터별 국제 표준 및 모범 사례 언급
+
+**응답은 반드시 한국어로, 실제 내용으로 작성하세요.**"""
 
 
 # ==============================================
@@ -568,35 +593,34 @@ def extract_key_info_rag(full_text: str, vector_db: Dict) -> str:
 
 @track_time
 def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tuple[str, str, List[str]]:
-    """Multi-Agent 분석 (🔧 프롬프트 완전 재작성)"""
-    
+    """섹터 전문가 집중 분석 (PMC 제거, 섹터 전문성 강화)"""
+
     primary_sector, all_sectors = detect_sector(text, extracted_info)
-    
-    print(f"\n🤝 Multi-Agent 분석")
-    print(f"  - Agent 1: PMC")
-    print(f"  - Agent 2: {primary_sector}")
-    
-    # Agent 1: PMC 분석 (🔧 완전 재작성)
-    print(f"\n👤 Agent 1...")
-    
-    pmc_areas = [
-        ("사업 논리성", "목표 성과지표 논리모형"),
-        ("기술적 타당성", "기술 시스템 인프라"),
-        ("예산 효율성", "예산 비용 단가"),
-        ("지속가능성", "지속가능성 역량강화"),
-        ("위험 관리", "위험 리스크 대응")
-    ]
-    
-    pmc_analysis = f"# 📊 Agent 1: PMC 분석\n\n---\n\n"
-    
-    for area_name, keywords in pmc_areas:
-        context, pages = search_relevant_chunks(keywords, vector_db, top_k=10)
-        
-        # 🔧 핵심 개선: 템플릿 제거, 예시 강조, 복사 방지
-        user_prompt = f"""**검토 영역**: {area_name}
+
+    print(f"\n🎯 섹터 전문가 분석")
+    print(f"  - 주섹터: {primary_sector}")
+    if len(all_sectors) > 1:
+        print(f"  - 부섹터: {', '.join(all_sectors[1:])}")
+
+    # 섹터 전문가 집중 분석
+    print(f"\n👤 {primary_sector} 전문가 분석 중...")
+
+    if primary_sector in KOICA_SECTORS:
+        sector_info = KOICA_SECTORS[primary_sector]
+
+        # 더 많은 컨텍스트 수집 (top_k 증가)
+        sector_keywords = " ".join(sector_info["keywords"][:10])
+        context, pages = search_relevant_chunks(sector_keywords, vector_db, top_k=15)
+
+        sector_expert_prompt = get_sector_expert_prompt(primary_sector)
+
+        user_prompt = f"""**섹터**: {primary_sector}
+
+**사업 정보**:
+{extracted_info[:1500]}
 
 **참고 문서** (p.{', '.join(map(str, pages))}):
-{context[:4000]}
+{context[:6500]}
 
 ---
 
@@ -604,175 +628,184 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 
 ---
 
-🎯 **과제**: 위 참고 문서에서 발견한 실제 내용을 바탕으로 {area_name} 영역에서 **2개의 구체적인 질문**을 만들고 분석하세요.
+🎯 **과제**: {primary_sector} 분야 전문가로서 아래 핵심 이슈와 필수 질문을 **빡세게** 검토하세요.
 
-🚨 **절대 금지**:
-- 형식 예시에 있는 내용(태양광, 디젤, 예산 증액 190만불 등)을 복사하지 마세요
-- 참고 문서에 없는 내용을 만들어내지 마세요
-- [질문], [구체적], [페이지] 같은 플레이스홀더 사용 금지
+## 📋 핵심 이슈 검토 ({len(sector_info['core_issues'])}개)
 
-✅ **필수**:
-- 참고 문서에서 실제로 언급된 내용만 사용
-- 실제 페이지 번호 + 실제 인용문 포함
-- 각 질문마다 권고사항 필수 포함"""
-        
-        response = llm.create_chat_completion(
-            messages=[
-                {"role": "system", "content": PROJECT_MANAGER_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=4000,
-            temperature=0.3,
-            top_p=0.95,
-            top_k=50,
-            repeat_penalty=1.1
-        )
-        
-        output = response['choices'][0]['message']['content']
-        output = comprehensive_post_processing(output, f"PMC-{area_name}")
+{chr(10).join([f'### 이슈 {i+1}: {issue}' for i, issue in enumerate(sector_info['core_issues'])])}
 
-        # 🔧 검증 로직 추가
-        is_valid, issues = validate_analysis_logic(output)
-        if not is_valid:
-            warnings = "\n".join([f"  ⚠️ {i['type']}: {i['desc']}" for i in issues])
-            print(f"\n⚠️ 검증 경고:\n{warnings}")
-
-        pmc_analysis += f"\n## {area_name}\n\n{output}\n\n"
-    
-    # Agent 2: 섹터 전문가
-    print(f"\n👤 Agent 2 ({primary_sector})...")
-    
-    if primary_sector in KOICA_SECTORS:
-        sector_info = KOICA_SECTORS[primary_sector]
-        
-        sector_keywords = " ".join(sector_info["keywords"][:8])
-        context, pages = search_relevant_chunks(sector_keywords, vector_db, top_k=12)
-        
-        sector_expert_prompt = get_sector_expert_prompt(primary_sector)
-        
-        user_prompt = f"""**섹터**: {primary_sector}
-
-**사업 정보**:
-{extracted_info[:1200]}
-
-**문서** (p.{', '.join(map(str, pages))}):
-{context[:5000]}
+**각 이슈별로 다음을 작성**:
+- **현황**: 문서에서 발견한 실제 내용 (페이지 번호 + 인용)
+- **평가**: ✅ 우수 / ⚠️ 보통 / ❌ 미흡
+- **문제점**: 구체적인 문제점 3개 이상
+- **영향도**: 🔴 Critical / 🟡 High / 🟢 Medium
+- **예상 영향**: 구체적인 시나리오 (기간, 금액, 범위)
+- **권고사항**:
+  - 즉시 조치 ([기간]): [구체적 조치] - 예산 [금액] - 담당 [조직]
+  - 단기 조치 ([기간]): [구체적 조치] - 예산 [금액] - 담당 [조직]
 
 ---
 
-{primary_sector} 분야 전문가로서 다음을 분석하세요:
+## ❓ 필수 질문 검토 ({len(sector_info['critical_questions'])}개)
 
-## 핵심 이슈 검토
-{chr(10).join([f'{i+1}. {issue}' for i, issue in enumerate(sector_info['core_issues'])])}
+{chr(10).join([f'{i+1}. {q}' for i, q in enumerate(sector_info['critical_questions'])])}
 
-각 이슈별:
-- 현황: [문서 내용]
-- 평가: ✅/⚠️/❌
-- 문제점: (3개)
-- 권고사항: (즉시/단기, 예산, 담당)
+**각 질문별로 다음을 작성**:
+- **답변**: ✅ 충분 / ⚠️ 부분적 / ❌ 없음
+- **근거**: p.[실제 페이지]에서 "[문서의 실제 인용문]" 명시
+- **문제점**: 발견한 구체적 문제점 3개
+- **영향도**: 🔴 Critical / 🟡 High / 🟢 Medium
+- **권고사항**: 즉시/단기/중기 조치 (구체적 예산, 담당, 기간 포함)
 
-## 필수 질문
-{chr(10).join([f'{i+1}. {q}' for i, q in enumerate(sector_info['critical_questions'][:5])])}
+---
 
-**중요**: 실제 내용으로 작성, 플레이스홀더 금지"""
-        
+🚨 **절대 금지**:
+- 형식 예시의 내용(태양광, 디젤, 예산 증액 190만불 등) 복사 금지
+- 참고 문서에 없는 내용을 임의로 만들지 마세요
+- [질문], [구체적], [페이지] 같은 플레이스홀더 사용 금지
+
+✅ **필수**:
+- 참고 문서에서 실제로 발견한 내용만 사용
+- 실제 페이지 번호 + 실제 인용문 반드시 포함
+- 모든 이슈와 질문에 대해 권고사항 필수 작성
+- 정량적 데이터가 있으면 반드시 활용 (%, 금액, 인원 등)"""
+
         response = llm.create_chat_completion(
             messages=[
                 {"role": "system", "content": sector_expert_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=5000,
+            max_tokens=8000,  # 더 긴 출력 허용
             temperature=0.3,
             top_p=0.95,
             top_k=50,
             repeat_penalty=1.1
         )
-        
+
         sector_analysis = response['choices'][0]['message']['content']
         sector_analysis = comprehensive_post_processing(sector_analysis, f"섹터-{primary_sector}")
-        
+
+        # 검증 로직 추가
+        is_valid, issues = validate_analysis_logic(sector_analysis)
+        if not is_valid:
+            warnings = "\n".join([f"  ⚠️ {i['type']}: {i['desc']}" for i in issues])
+            print(f"\n⚠️ 검증 경고:\n{warnings}")
+
     else:
         sector_analysis = f"## {primary_sector} 분야\n\n일반 분야로 섹터 특화 분석 생략."
-    
-    full_analysis = f"""# 🎯 Multi-Agent TAG 분석
 
-**분석 체계**: PMC + {primary_sector}
+    full_analysis = f"""# 🎯 {primary_sector} 섹터 전문가 TAG 분석
 
----
-
-{pmc_analysis}
+**분석 체계**: {primary_sector} 전문가 집중 검토
+**검토 이슈**: {len(KOICA_SECTORS.get(primary_sector, {}).get('core_issues', []))}개
+**필수 질문**: {len(KOICA_SECTORS.get(primary_sector, {}).get('critical_questions', []))}개
 
 ---
-
-# 📊 Agent 2: {primary_sector} 전문가
 
 {sector_analysis}
 """
-    
+
     return full_analysis, primary_sector, all_sectors
 
 
 @track_time
 def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: str, sector: str) -> str:
-    """통합 권고안"""
-    
-    context, pages = search_relevant_chunks("개선 권고", vector_db, top_k=10)
-    
+    """섹터 전문가 통합 권고안"""
+
+    context, pages = search_relevant_chunks("개선 권고 조치", vector_db, top_k=12)
+
     user_prompt = f"""**섹터**: {sector}
 
-**분석 요약**:
-{analysis[:3000]}
+**{sector} 전문가 분석 요약**:
+{analysis[:4000]}
+
+**참고 문서** (p.{', '.join(map(str, pages))}):
+{context[:3000]}
 
 ---
 
-통합 권고안 작성:
+🎯 **과제**: {sector} 분야 전문가로서 위 분석을 바탕으로 **실행 가능한 통합 권고안**을 작성하세요.
 
-## 🔴 Critical (3개)
+## 🔴 Critical 우선순위 이슈 (3개)
 
-### 이슈 1: [실제 제목]
-- 분야: PMC / {sector}
-- 문제: [100자]
-- 즉시 조치: [조치] - 예산 [금액] - 담당 [조직]
-- 영향: [시나리오]
+각 이슈별로 다음 형식으로 작성:
 
-### 이슈 2, 3: [동일]
+### 이슈 1: [섹터 관점의 구체적 제목]
+- **분야**: {sector}
+- **문제**: [100자 이내로 핵심 문제 기술]
+- **근거**: p.[페이지] "[실제 인용]"
+- **영향**: [구체적 시나리오 - 누가, 언제, 어떻게 영향받는지]
+- **즉시 조치**: [조치 내용] - 예산 [금액] - 담당 [조직] - 기간 [X주/개월]
+- **기대효과**: [측정 가능한 개선 목표]
 
-## 🟡 High (3개)
+### 이슈 2, 3: [위와 동일한 형식]
 
-### 이슈 4: [실제 제목]
-- 문제: [80자]
-- 조치: [조치] - 예산 - 담당
-- 효과: [정량적]
+---
 
-## 💬 TAG 종합 의견
+## 🟡 High 우선순위 이슈 (3개)
 
-### 핵심 요약 (3줄)
-1. [메시지]
-2. [메시지]
-3. [메시지]
+각 이슈별로 다음 형식으로 작성:
 
-### 문서 품질: [점수]/100점
+### 이슈 4: [구체적 제목]
+- **문제**: [80자 이내]
+- **근거**: p.[페이지]
+- **단기 조치**: [조치] - 예산 [금액] - 담당 [조직] - 기간 [X개월]
+- **효과**: [정량적 목표]
 
-### 최우선 조치 (3개)
-1. [조치] - 기간 - 예산 - 이유
+### 이슈 5, 6: [위와 동일한 형식]
 
-**중요**: 실제 내용 작성, 플레이스홀더 금지"""
-    
+---
+
+## 💬 {sector} 전문가 종합 의견
+
+### 📌 핵심 메시지 (3줄)
+1. [섹터 관점의 핵심 메시지 1]
+2. [섹터 관점의 핵심 메시지 2]
+3. [섹터 관점의 핵심 메시지 3]
+
+### 📊 문서 품질 평가
+- **점수**: [X]/100점
+- **강점**: [2개]
+- **약점**: [3개]
+- **개선 필요**: [우선순위 3개]
+
+### ⚡ 최우선 조치 (3개)
+1. **[조치명]** - 기간: [X주/개월] - 예산: [금액] - 이유: [왜 최우선인지 1줄 설명]
+2. **[조치명]** - 기간: [X주/개월] - 예산: [금액] - 이유: [1줄 설명]
+3. **[조치명]** - 기간: [X주/개월] - 예산: [금액] - 이유: [1줄 설명]
+
+### 🌍 {sector} 섹터 국제 기준 및 모범 사례
+- [해당 섹터의 국제 표준, SDGs 목표, 모범 사례 등 언급]
+- [이 사업이 국제 기준과 어떻게 부합/불일치하는지]
+
+---
+
+🚨 **절대 금지**:
+- [질문], [구체적], [페이지], [금액] 등 플레이스홀더 사용
+- 근거 없는 주장 (반드시 페이지 + 인용 포함)
+- 형식 예시 내용 복사
+
+✅ **필수**:
+- 모든 권고사항에 예산, 담당, 기간 포함
+- 측정 가능한 목표 설정
+- {sector} 섹터 전문성 반영
+- 실제 문서 내용만 사용"""
+
     response = llm.create_chat_completion(
         messages=[
-            {"role": "system", "content": f"{PROJECT_MANAGER_PROMPT}\n\n{get_sector_expert_prompt(sector)}"},
+            {"role": "system", "content": get_sector_expert_prompt(sector)},
             {"role": "user", "content": user_prompt}
         ],
-        max_tokens=5000,
+        max_tokens=6000,
         temperature=0.3,
         top_p=0.95,
         top_k=50,
         repeat_penalty=1.1
     )
-    
+
     output = response['choices'][0]['message']['content']
-    output = comprehensive_post_processing(output, "통합권고")
-    
+    output = comprehensive_post_processing(output, "섹터권고")
+
     return output
 
 
@@ -816,13 +849,13 @@ def upload_and_analyze_rag(pdf_file, progress=gr.Progress()):
 
 **문서**: {total_pages}p, {len(text):,}자
 **청크**: {len(chunks)}개
-**시스템**: TAG v3.1 (예시 복사 방지)
+**시스템**: TAG v4.0 (섹터 전문가 집중)
 
-🔧 **v3.1 개선**:
-- 예시 내용 복사 금지 명시
-- 형식 가이드로 변경
-- 예시 복사 검증 추가
-- 실제 문서 내용만 사용 강조
+🔥 **v4.0 주요 변경**:
+- PMC 분석 제거 (Agent 6회 → 1회로 축소)
+- 섹터 전문가 분석만 집중 (빡센 검토)
+- LLM 호출 대폭 감소 (속도 향상)
+- 섹터별 핵심 이슈 + 필수 질문 강화
 
 ✅ 인덱싱 완료!"""
             
@@ -866,17 +899,18 @@ def upload_and_analyze_rag(pdf_file, progress=gr.Progress()):
         
         final_status = f"""{status}
 
-🎉 TAG 분석 완료!
+🎉 섹터 전문가 분석 완료!
 
-🎯 {detected_sector}
+🎯 섹터: {detected_sector}
 
 ⏱️ 시간:
 {timing_summary}
 
-🔧 v3.1:
-  ✅ 예시 복사 방지
-  ✅ 실제 문서 분석
-  ✅ 검증 로직 추가"""
+🔥 v4.0:
+  ✅ PMC 제거 (LLM 6회→1회)
+  ✅ 섹터 전문가 집중
+  ✅ 빡센 검토 강화
+  ✅ 처리 속도 대폭 향상"""
         
         yield final_status, rag_info, step1, step2, step3
         
@@ -892,7 +926,7 @@ def upload_and_analyze_rag(pdf_file, progress=gr.Progress()):
 
 def generate_clean_report(rag, info, analysis, recs):
     report = f"""{'='*80}
-KOICA TAG v3.1 분석 보고서
+KOICA TAG v4.0 섹터 전문가 분석 보고서
 {'='*80}
 
 생성: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -906,13 +940,13 @@ KOICA TAG v3.1 분석 보고서
 {info}
 
 {'='*80}
-2️⃣ Multi-Agent 분석
+2️⃣ 섹터 전문가 분석
 {'='*80}
 
 {analysis}
 
 {'='*80}
-3️⃣ 통합 권고
+3️⃣ 섹터 전문가 권고안
 {'='*80}
 
 {recs}
@@ -938,7 +972,7 @@ def generate_html_report(rag, info, analysis, recs):
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>KOICA TAG v3.1</title>
+    <title>KOICA TAG v4.0 섹터 전문가</title>
     <style>
         body {{ font-family: 'Noto Sans KR', sans-serif; padding: 40px; max-width: 900px; margin: 0 auto; }}
         h1 {{ color: #2E7D32; }}
@@ -947,15 +981,15 @@ def generate_html_report(rag, info, analysis, recs):
     </style>
 </head>
 <body>
-    <h1>🎯 KOICA TAG v3.1</h1>
+    <h1>🎯 KOICA TAG v4.0 섹터 전문가</h1>
     <p>생성: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M')}</p>
-    
+
     <div class="section">{md_to_html(rag)}</div>
     <h2>1️⃣ 사업 정보</h2>
     <div class="section">{md_to_html(info)}</div>
-    <h2>2️⃣ 분석</h2>
+    <h2>2️⃣ 섹터 전문가 분석</h2>
     <div class="section">{md_to_html(analysis)}</div>
-    <h2>3️⃣ 권고</h2>
+    <h2>3️⃣ 섹터 전문가 권고안</h2>
     <div class="section">{md_to_html(recs)}</div>
 </body>
 </html>
@@ -967,22 +1001,23 @@ def generate_html_report(rag, info, analysis, recs):
         return f.name
 
 
-demo = gr.Blocks(theme=gr.themes.Ocean(), title="KOICA TAG v3.1")
+demo = gr.Blocks(theme=gr.themes.Ocean(), title="KOICA TAG v4.0 섹터 전문가")
 
 with demo:
     gr.Markdown("""
-    # 🎯 KOICA TAG v3.1 - 예시 복사 방지 강화
+    # 🎯 KOICA TAG v4.0 - 섹터 전문가 집중
 
-    **🔧 v3.1 핵심 개선**:
-    1. ✅ **예시 복사 방지**: 형식 가이드로 변경, 구체적 내용 제거
-    2. ✅ **명시적 지시 강화**: "태양광, 디젤 등 예시 내용 복사 금지"
-    3. ✅ **검증 로직 추가**: 예시 키워드 검출 및 경고
-    4. ✅ **실제 문서 강조**: 참고 문서에서 발견한 내용만 사용
+    **🔥 v4.0 주요 변경**:
+    1. ✅ **PMC Agent 제거**: LLM 호출 6회 → 1회로 대폭 축소
+    2. ✅ **섹터 전문가 집중**: 섹터별 핵심 이슈 + 필수 질문 빡세게 검토
+    3. ✅ **처리 속도 향상**: Agent 부담 감소로 분석 속도 대폭 개선
+    4. ✅ **검토 품질 강화**: 섹터 전문성에 집중한 심층 분석
 
-    **해결된 문제**:
-    - ❌ 예시 내용(태양광, 디젤) 복사 → ✅ 실제 PDF 문서 분석
-    - ❌ 엉뚱한 내용 출력 → ✅ 문서에 있는 내용만 분석
-    - ❌ 형식 예시와 실제 분석 혼동 → ✅ 명확한 구분
+    **개선 효과**:
+    - ⚡ 처리 속도: Agent 6회 → 1회 (약 5~6배 빠름)
+    - 🎯 집중도: PMC 일반 검토 제거, 섹터 특화 검토만 수행
+    - 💡 AI 부담 감소: 한 번에 하나의 역할만 수행 (정신 차림!)
+    - 🔍 검토 깊이: 섹터별 국제 기준, 모범 사례 중심 검토
     """)
     
     with gr.Row():
@@ -996,9 +1031,9 @@ with demo:
         with gr.Tab("1️⃣ 핵심"):
             info = gr.Textbox(label="사업 정보", lines=25, interactive=False)
         with gr.Tab("2️⃣ 분석"):
-            analysis = gr.Textbox(label="Multi-Agent 분석 (질문 자동생성)", lines=50, interactive=False)
+            analysis = gr.Textbox(label="섹터 전문가 분석 (핵심 이슈 + 필수 질문)", lines=50, interactive=False)
         with gr.Tab("3️⃣ 권고"):
-            recs = gr.Textbox(label="통합 권고", lines=45, interactive=False)
+            recs = gr.Textbox(label="섹터 전문가 권고안", lines=45, interactive=False)
     
     with gr.Row():
         download_txt_btn = gr.DownloadButton(label="📥 TXT", visible=False)
@@ -1028,13 +1063,14 @@ with demo:
     )
 
 print("=" * 80)
-print("🚀 KOICA TAG v3.1 (예시 복사 방지 강화)")
+print("🚀 KOICA TAG v4.0 (섹터 전문가 집중)")
 print("=" * 80)
-print("\n🔧 v3.1 개선:")
-print("  - 예시를 형식 가이드로 변경 (구체적 내용 제거)")
-print("  - 예시 내용 복사 절대 금지 명시")
-print("  - 예시 복사 검증 로직 추가")
-print("  - 실제 문서 내용만 사용 강조")
+print("\n🔥 v4.0 주요 변경:")
+print("  - PMC Agent 제거 (LLM 호출 6회 → 1회)")
+print("  - 섹터 전문가 분석만 집중 (빡센 검토)")
+print("  - 처리 속도 대폭 향상 (약 5~6배)")
+print("  - 섹터별 핵심 이슈 + 필수 질문 강화")
+print("  - AI 부담 감소로 정신 차림!")
 print("\n" + "=" * 80)
 
 demo.launch(share=True, debug=False, show_error=True)
