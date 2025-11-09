@@ -122,24 +122,29 @@ def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 400) -> List[Di
     return chunks
 
 
-def create_vector_db(chunks: List[Dict], batch_size: int = 32) -> Dict:
+def create_vector_db(chunks: List[Dict], batch_size: int = 8) -> Dict:
     texts = [chunk["text"] for chunk in chunks]
     print(f"  💾 {len(chunks)}개 청크 벡터화 중...")
-    
+
     all_embeddings = []
-    
+    total_batches = (len(texts) + batch_size - 1) // batch_size
+
     for i in range(0, len(texts), batch_size):
+        batch_num = i // batch_size + 1
+        print(f"    ⏳ 배치 {batch_num}/{total_batches} 처리 중...")
         batch = texts[i:i+batch_size]
         batch_emb = embedder.encode(
             batch,
-            show_progress_bar=False,
+            show_progress_bar=True,
             device='cpu',
             batch_size=batch_size
         )
         all_embeddings.append(batch_emb)
-    
+        print(f"    ✅ 배치 {batch_num}/{total_batches} 완료")
+
     embeddings = np.vstack(all_embeddings) if len(all_embeddings) > 1 else all_embeddings[0]
-    
+    print(f"  ✅ 벡터화 완료!")
+
     return {"chunks": chunks, "embeddings": embeddings}
 
 
