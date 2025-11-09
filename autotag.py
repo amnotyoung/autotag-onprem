@@ -35,11 +35,11 @@ import pdfplumber
 import numpy as np
 import pandas as pd
 
-print("📥 Qwen2.5 32B 다운로드 중...")
+print("📥 Mistral Small 22B 다운로드 중...")
 
 model_path = hf_hub_download(
-    repo_id="bartowski/Qwen2.5-32B-Instruct-GGUF",
-    filename="Qwen2.5-32B-Instruct-Q3_K_M.gguf",
+    repo_id="bartowski/Mistral-Small-Instruct-2409-GGUF",
+    filename="Mistral-Small-Instruct-2409-Q4_K_M.gguf",
     local_dir="./models"
 )
 
