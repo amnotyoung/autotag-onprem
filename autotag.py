@@ -35,18 +35,18 @@ import pdfplumber
 import numpy as np
 import pandas as pd
 
-print("📥 Llama 3.1 8B 다운로드 중...")
+print("📥 Mistral Small 22B 다운로드 중...")
 
 model_path = hf_hub_download(
-    repo_id="QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
-    filename="Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
+    repo_id="bartowski/Mistral-Small-Instruct-2409-GGUF",
+    filename="Mistral-Small-Instruct-2409-Q4_K_M.gguf",
     local_dir="./models"
 )
 
 print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=16384,
+    n_ctx=8192,        # 프롬프트 수용 + 속도 균형
     n_gpu_layers=-1,
     n_batch=512,
     n_threads=4,
@@ -57,11 +57,11 @@ print("✅ LLM 준비 완료!\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
-    embedder = SentenceTransformer('jhgan/ko-sroberta-multitask', device='cuda')
-    print("✅ 한국어 임베딩 준비 완료!\n")
+    embedder = SentenceTransformer('jhgan/ko-sroberta-multitask', device='cpu')
+    print("✅ 한국어 임베딩 준비 완료! (CPU)\n")
 except:
-    embedder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device='cuda')
-    print("✅ 다국어 임베딩 준비 완료!\n")
+    embedder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device='cpu')
+    print("✅ 다국어 임베딩 준비 완료! (CPU)\n")
 
 if 'demo' in dir():
     try:
@@ -122,27 +122,29 @@ def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 400) -> List[Di
     return chunks
 
 
-def create_vector_db(chunks: List[Dict], batch_size: int = 32) -> Dict:
+def create_vector_db(chunks: List[Dict], batch_size: int = 8) -> Dict:
     texts = [chunk["text"] for chunk in chunks]
     print(f"  💾 {len(chunks)}개 청크 벡터화 중...")
-    
+
     all_embeddings = []
-    
+    total_batches = (len(texts) + batch_size - 1) // batch_size
+
     for i in range(0, len(texts), batch_size):
+        batch_num = i // batch_size + 1
+        print(f"    ⏳ 배치 {batch_num}/{total_batches} 처리 중...")
         batch = texts[i:i+batch_size]
         batch_emb = embedder.encode(
-            batch, 
-            show_progress_bar=False,
-            device='cuda',
+            batch,
+            show_progress_bar=True,
+            device='cpu',
             batch_size=batch_size
         )
         all_embeddings.append(batch_emb)
-        
-        if i % 128 == 0 and i > 0:
-            torch.cuda.empty_cache()
-    
+        print(f"    ✅ 배치 {batch_num}/{total_batches} 완료")
+
     embeddings = np.vstack(all_embeddings) if len(all_embeddings) > 1 else all_embeddings[0]
-    
+    print(f"  ✅ 벡터화 완료!")
+
     return {"chunks": chunks, "embeddings": embeddings}
 
 
@@ -554,8 +556,10 @@ def extract_key_info_rag(full_text: str, vector_db: Dict) -> str:
             {"role": "user", "content": user_prompt}
         ],
         max_tokens=3000,
-        temperature=0.25,
-        repeat_penalty=1.15
+        temperature=0.3,      # Mistral 최적화
+        top_p=0.95,
+        top_k=50,
+        repeat_penalty=1.1
     )
     
     output = response['choices'][0]['message']['content']
@@ -619,7 +623,9 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
             ],
             max_tokens=4000,
             temperature=0.3,
-            repeat_penalty=1.2  # 🔧 반복 페널티 증가
+            top_p=0.95,
+            top_k=50,
+            repeat_penalty=1.1
         )
         
         output = response['choices'][0]['message']['content']
@@ -676,8 +682,10 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
                 {"role": "user", "content": user_prompt}
             ],
             max_tokens=5000,
-            temperature=0.35,
-            repeat_penalty=1.2
+            temperature=0.3,
+            top_p=0.95,
+            top_k=50,
+            repeat_penalty=1.1
         )
         
         sector_analysis = response['choices'][0]['message']['content']
@@ -757,7 +765,9 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
         ],
         max_tokens=5000,
         temperature=0.3,
-        repeat_penalty=1.2
+        top_p=0.95,
+        top_k=50,
+        repeat_penalty=1.1
     )
     
     output = response['choices'][0]['message']['content']

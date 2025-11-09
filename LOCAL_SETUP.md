@@ -4,14 +4,15 @@ KOICA TAG v3.1을 로컬 장치에서 실행하기 위한 상세 가이드입니
 
 ## 📋 시스템 요구사항
 
-### 필수 사항
+### 필수 사항 (Qwen2.5 32B 모델 기준)
 - **GPU**: NVIDIA GPU (CUDA 지원)
-  - VRAM 8GB 이상 권장 (RTX 3060 이상 또는 동급)
-  - 최소 VRAM 6GB (성능 저하 가능)
+  - **VRAM 16GB 이상 권장** (RTX 4090, RTX 4080, RTX 3090 또는 동급)
+  - **최소 VRAM 12GB** (RTX 3060 12GB - 성능 저하 가능)
+  - ✅ **노트북 GPU에서도 실행 가능**
 - **CUDA**: CUDA 11.8 이상
 - **Python**: Python 3.8 - 3.11 (3.12는 일부 패키지 호환성 이슈 가능)
 - **RAM**: 16GB 이상 권장
-- **저장 공간**: 10GB 이상 (모델 다운로드 포함)
+- **저장 공간**: 20GB 이상 (32B 모델 크기: ~15GB)
 
 ### 운영체제
 - Windows 10/11
@@ -161,10 +162,25 @@ python autotag.py
 
 **증상**: `CUDA out of memory`
 
-**해결 방법**:
-1. `autotag.py`의 `n_ctx` 값 줄이기 (16384 → 8192)
-2. 다른 프로그램 종료 (크롬, 게임 등)
-3. 더 작은 양자화 모델 사용 (Q6_K → Q4_K_M)
+**해결 방법 (Qwen2.5 32B)**:
+1. **더 작은 양자화 사용**:
+   - Q3_K_M (현재, ~15GB) → Q2_K (~12GB, 품질 저하)
+
+2. `autotag.py`의 `n_ctx` 값 줄이기:
+   ```python
+   n_ctx=16384  # → 8192 또는 4096으로 변경
+   ```
+
+3. 다른 프로그램 종료 (크롬, 게임, IDE 등)
+
+4. **GPU 메모리 확인**:
+   ```bash
+   nvidia-smi
+   ```
+
+5. **대안 모델**:
+   - 더 작은 모델: Llama 3.1 8B (VRAM 8GB)
+   - 더 큰 모델: Llama 3.1 70B (VRAM 40GB 필요, 클라우드 권장)
 
 ### llama-cpp-python 설치 오류
 
@@ -194,8 +210,8 @@ sudo apt install build-essential cmake
 `autotag.py`에서 모델 저장 위치 변경:
 ```python
 model_path = hf_hub_download(
-    repo_id="QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
-    filename="Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
+    repo_id="bartowski/Qwen2.5-32B-Instruct-GGUF",
+    filename="Qwen2.5-32B-Instruct-Q3_K_M.gguf",
     local_dir="/your/custom/path/models"  # 여기를 변경
 )
 ```
@@ -217,12 +233,24 @@ llm = Llama(
 
 ## 📊 성능 벤치마크
 
-| GPU | VRAM | 처리 시간 (30페이지 PDF) |
-|-----|------|------------------------|
-| RTX 4090 | 24GB | ~3-4분 |
-| RTX 3080 | 10GB | ~5-7분 |
-| RTX 3060 | 12GB | ~7-10분 |
-| GTX 1660 Ti | 6GB | ~12-15분 |
+### Qwen2.5 32B (Q3_K_M) - 현재 버전
+| GPU | VRAM | 지원 여부 | 처리 시간 (30페이지 PDF) |
+|-----|------|----------|------------------------|
+| RTX 4090 Desktop | 24GB | ✅ | ~4-5분 |
+| RTX 4090 Laptop | 16GB | ✅ | ~5-7분 |
+| RTX 4080 Laptop | 12GB | ✅ | ~6-8분 |
+| RTX 3090 | 24GB | ✅ | ~5-7분 |
+| RTX 3080 | 10GB | ❌ | 메모리 부족 |
+| RTX 3060 12GB | 12GB | ⚠️ | ~8-12분 |
+
+### 다른 모델 비교
+| 모델 | VRAM 요구 | 성능 | 실행 가능 GPU |
+|------|----------|------|-------------|
+| Llama 3.1 8B | 8GB | ⭐⭐⭐ | RTX 3060+ |
+| **Qwen2.5 32B** | **15GB** | **⭐⭐⭐⭐** | **RTX 4090 Laptop+** |
+| Llama 3.1 70B | 40GB | ⭐⭐⭐⭐⭐ | A100, H100 |
+
+✅ **32B 모델 권장**: 노트북에서 실행 가능하면서 우수한 성능
 
 ## 📞 지원
 
