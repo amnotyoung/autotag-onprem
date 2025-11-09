@@ -194,8 +194,8 @@ sudo apt install build-essential cmake
 `autotag.py`에서 모델 저장 위치 변경:
 ```python
 model_path = hf_hub_download(
-    repo_id="QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
-    filename="Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
+    repo_id="QuantFactory/Meta-Llama-3.1-70B-Instruct-GGUF",
+    filename="Meta-Llama-3.1-70B-Instruct.Q4_K_M.gguf",
     local_dir="/your/custom/path/models"  # 여기를 변경
 )
 ```
