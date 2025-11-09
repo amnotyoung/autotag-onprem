@@ -35,11 +35,11 @@ import pdfplumber
 import numpy as np
 import pandas as pd
 
-print("📥 Llama 3.1 70B 다운로드 중...")
+print("📥 Qwen2.5 32B 다운로드 중...")
 
 model_path = hf_hub_download(
-    repo_id="QuantFactory/Meta-Llama-3.1-70B-Instruct-GGUF",
-    filename="Meta-Llama-3.1-70B-Instruct.Q4_K_M.gguf",
+    repo_id="Qwen/Qwen2.5-32B-Instruct-GGUF",
+    filename="qwen2.5-32b-instruct-q3_k_m.gguf",
     local_dir="./models"
 )
 

@@ -1,6 +1,6 @@
 # 🚀 빠른 시작 가이드
 
-70B 모델을 로컬에서 테스트하기 위한 단계별 가이드입니다.
+Qwen2.5 32B 모델을 로컬에서 테스트하기 위한 단계별 가이드입니다.
 
 ## ⚠️ 먼저 확인하세요!
 
@@ -10,9 +10,9 @@ nvidia-smi
 ```
 
 **필요한 GPU VRAM**:
-- ✅ **40GB 이상**: A100, A6000, H100 → 문제없이 실행 가능
-- ⚠️ **24GB**: RTX 4090, RTX 3090 → Q3_K_M 양자화로 실행 가능 (성능 저하)
-- ❌ **24GB 미만**: RTX 3080, RTX 3060 → **70B 모델 실행 불가** (8B 모델 권장)
+- ✅ **16GB 이상**: RTX 4090 Laptop, RTX 4080, RTX 3090 → 완벽하게 실행 가능
+- ⚠️ **12GB**: RTX 3060 12GB, RTX 4060 Ti → 실행 가능 (약간 느림)
+- ❌ **12GB 미만**: RTX 3060 8GB, RTX 3070 → **32B 모델 실행 불가** (8B 모델 권장)
 
 ---
 
@@ -82,16 +82,16 @@ python autotag.py
 ```
 
 ### 첫 실행 시 일어나는 일
-1. **모델 다운로드** (~40GB, 10-20분 소요)
+1. **모델 다운로드** (~15GB, 5-10분 소요)
    ```
-   📥 Llama 3.1 70B 다운로드 중...
+   📥 Qwen2.5 32B 다운로드 중...
    Downloading...  [████████] 100%
    ```
 
 2. **GPU 메모리 할당**
    ```
-   ✅ GPU: NVIDIA A100-SXM4-40GB
-   ✅ VRAM: 40.0GB
+   ✅ GPU: NVIDIA GeForce RTX 4090 Laptop
+   ✅ VRAM: 16.0GB
    🔄 LLM 초기화 중...
    ✅ LLM 준비 완료!
    ```
@@ -123,13 +123,13 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 ### 문제 2: "CUDA out of memory"
 
-**24GB GPU 사용자**:
+**12GB GPU 사용자**:
 `autotag.py`에서 더 작은 양자화 모델로 변경:
 ```python
 # 40-42번째 줄 수정
 model_path = hf_hub_download(
-    repo_id="QuantFactory/Meta-Llama-3.1-70B-Instruct-GGUF",
-    filename="Meta-Llama-3.1-70B-Instruct.Q3_K_M.gguf",  # Q4_K_M → Q3_K_M
+    repo_id="Qwen/Qwen2.5-32B-Instruct-GGUF",
+    filename="qwen2.5-32b-instruct-q2_k.gguf",  # Q3_K_M → Q2_K
     local_dir="./models"
 )
 ```
@@ -148,8 +148,8 @@ llm = Llama(
 )
 ```
 
-### 문제 3: 24GB 미만 GPU
-70B 모델 대신 8B 모델로 되돌리기:
+### 문제 3: 12GB 미만 GPU
+32B 모델 대신 8B 모델 사용:
 ```python
 # autotag.py 40-42번째 줄
 model_path = hf_hub_download(
@@ -197,12 +197,12 @@ Running on public URL: https://xxxxx.gradio.live
 ## ✅ 체크리스트
 
 실행 전 확인:
-- [ ] GPU VRAM 40GB 이상 (또는 24GB + Q3_K_M 양자화)
+- [ ] GPU VRAM 16GB 이상 (또는 12GB + Q2_K 양자화)
 - [ ] NVIDIA 드라이버 설치됨 (`nvidia-smi` 작동)
 - [ ] Python 가상 환경 활성화
 - [ ] PyTorch CUDA 설치 (`torch.cuda.is_available() == True`)
 - [ ] llama-cpp-python 설치
-- [ ] 저장 공간 50GB 이상 확보
+- [ ] 저장 공간 20GB 이상 확보
 
 모든 항목 확인 완료 → `python autotag.py` 실행!
 
