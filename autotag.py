@@ -47,7 +47,7 @@ model_path = hf_hub_download(
 print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=8192,        # 프롬프트 수용 + 속도 균형
+    n_ctx=16384,       # Context window 확장 (8192→16384) - 섹터 전문가 빡센 검토 지원
     n_gpu_layers=-1,
     n_batch=512,
     n_threads=4,
