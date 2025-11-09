@@ -57,11 +57,11 @@ print("✅ LLM 준비 완료!\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
-    embedder = SentenceTransformer('jhgan/ko-sroberta-multitask', device='cuda')
-    print("✅ 한국어 임베딩 준비 완료!\n")
+    embedder = SentenceTransformer('jhgan/ko-sroberta-multitask', device='cpu')
+    print("✅ 한국어 임베딩 준비 완료! (CPU)\n")
 except:
-    embedder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device='cuda')
-    print("✅ 다국어 임베딩 준비 완료!\n")
+    embedder = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device='cpu')
+    print("✅ 다국어 임베딩 준비 완료! (CPU)\n")
 
 if 'demo' in dir():
     try:
