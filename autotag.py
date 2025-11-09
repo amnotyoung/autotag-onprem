@@ -708,7 +708,7 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 
         # 컨텍스트 수집 (top_k 최적화)
         sector_keywords = " ".join(sector_info["keywords"][:10])
-        context, pages = search_relevant_chunks(sector_keywords, vector_db, top_k=12)
+        context, pages = search_relevant_chunks(sector_keywords, vector_db, top_k=10)
 
         sector_expert_prompt = get_sector_expert_prompt(primary_sector)
 
@@ -718,7 +718,7 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 {extracted_info[:1000]}
 
 **참고 문서** (p.{', '.join(map(str, pages))}):
-{context[:4500]}
+{context[:3500]}
 
 ---
 
@@ -790,7 +790,7 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
             ],
             vector_db=vector_db,
             max_retries=2,
-            max_tokens=6000
+            max_tokens=4500
         )
 
     else:
@@ -814,15 +814,15 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: str, sector: str) -> str:
     """섹터 전문가 통합 권고안"""
 
-    context, pages = search_relevant_chunks("개선 권고 조치", vector_db, top_k=12)
+    context, pages = search_relevant_chunks("개선 권고 조치", vector_db, top_k=10)
 
     user_prompt = f"""**섹터**: {sector}
 
 **{sector} 전문가 분석 요약**:
-{analysis[:4000]}
+{analysis[:3500]}
 
 **참고 문서** (p.{', '.join(map(str, pages))}):
-{context[:3000]}
+{context[:2500]}
 
 ---
 
@@ -903,7 +903,7 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
         ],
         vector_db=vector_db,
         max_retries=2,
-        max_tokens=6000
+        max_tokens=4500
     )
 
     return output
