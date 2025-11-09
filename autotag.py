@@ -47,7 +47,7 @@ model_path = hf_hub_download(
 print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=8192,        # Context window 최적화 - 속도와 품질 균형
+    n_ctx=12288,       # Context window 증가 - 완전한 출력 보장
     n_gpu_layers=-1,
     n_batch=512,
     n_threads=4,
@@ -790,7 +790,7 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
             ],
             vector_db=vector_db,
             max_retries=2,
-            max_tokens=4500
+            max_tokens=6000
         )
 
     else:
@@ -903,7 +903,7 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
         ],
         vector_db=vector_db,
         max_retries=2,
-        max_tokens=4500
+        max_tokens=6000
     )
 
     return output
