@@ -554,8 +554,10 @@ def extract_key_info_rag(full_text: str, vector_db: Dict) -> str:
             {"role": "user", "content": user_prompt}
         ],
         max_tokens=3000,
-        temperature=0.25,
-        repeat_penalty=1.15
+        temperature=0.1,      # Qwen 최적화: 더 결정론적
+        top_p=0.9,
+        top_k=40,
+        repeat_penalty=1.5    # 플레이스홀더 반복 방지
     )
     
     output = response['choices'][0]['message']['content']
@@ -618,8 +620,10 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
                 {"role": "user", "content": user_prompt}
             ],
             max_tokens=4000,
-            temperature=0.3,
-            repeat_penalty=1.2  # 🔧 반복 페널티 증가
+            temperature=0.15,     # Qwen 최적화
+            top_p=0.9,
+            top_k=40,
+            repeat_penalty=1.5    # 플레이스홀더 방지 강화
         )
         
         output = response['choices'][0]['message']['content']
@@ -676,8 +680,10 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
                 {"role": "user", "content": user_prompt}
             ],
             max_tokens=5000,
-            temperature=0.35,
-            repeat_penalty=1.2
+            temperature=0.2,      # Qwen 최적화
+            top_p=0.9,
+            top_k=40,
+            repeat_penalty=1.5
         )
         
         sector_analysis = response['choices'][0]['message']['content']
@@ -756,8 +762,10 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
             {"role": "user", "content": user_prompt}
         ],
         max_tokens=5000,
-        temperature=0.3,
-        repeat_penalty=1.2
+        temperature=0.15,     # Qwen 최적화
+        top_p=0.9,
+        top_k=40,
+        repeat_penalty=1.5
     )
     
     output = response['choices'][0]['message']['content']
