@@ -128,8 +128,8 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 ```python
 # 40-42번째 줄 수정
 model_path = hf_hub_download(
-    repo_id="Qwen/Qwen2.5-32B-Instruct-GGUF",
-    filename="qwen2.5-32b-instruct-q2_k.gguf",  # Q3_K_M → Q2_K
+    repo_id="bartowski/Qwen2.5-32B-Instruct-GGUF",
+    filename="Qwen2.5-32B-Instruct-Q2_K.gguf",  # Q3_K_M → Q2_K
     local_dir="./models"
 )
 ```

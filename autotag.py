@@ -38,8 +38,8 @@ import pandas as pd
 print("📥 Qwen2.5 32B 다운로드 중...")
 
 model_path = hf_hub_download(
-    repo_id="Qwen/Qwen2.5-32B-Instruct-GGUF",
-    filename="qwen2.5-32b-instruct-q3_k_m.gguf",
+    repo_id="bartowski/Qwen2.5-32B-Instruct-GGUF",
+    filename="Qwen2.5-32B-Instruct-Q3_K_M.gguf",
     local_dir="./models"
 )
 
