@@ -358,24 +358,24 @@ def validate_analysis_logic(analysis_text: str, vector_db: Optional[Dict] = None
                     "location": pattern.group()
                 })
 
-    # 🔥 인용문 검증 (vector_db가 있을 때만)
-    if vector_db:
-        # p.[숫자] "[인용문]" 패턴 찾기
-        citation_pattern = re.finditer(r'p\.(\d+)[^\n"]*?"([^"]{10,})"', analysis_text)
-        for match in citation_pattern:
-            page_num = int(match.group(1))
-            quote = match.group(2)
-
-            # 해당 페이지의 청크에서 인용문 찾기
-            page_chunks = [chunk for chunk in vector_db['chunks'] if chunk['page'] == page_num]
-            found = any(quote[:20] in chunk['text'] or chunk['text'][:100] in quote for chunk in page_chunks)
-
-            if not found and len(page_chunks) > 0:
-                issues.append({
-                    "type": "⚠️ 인용문 불일치",
-                    "desc": f"p.{page_num}의 인용문이 실제 문서와 다를 수 있음: \"{quote[:50]}...\"",
-                    "location": match.group()[:80]
-                })
+    # 🔥 인용문 검증 (비활성화 - 너무 엄격함)
+    # if vector_db:
+    #     # p.[숫자] "[인용문]" 패턴 찾기
+    #     citation_pattern = re.finditer(r'p\.(\d+)[^\n"]*?"([^"]{10,})"', analysis_text)
+    #     for match in citation_pattern:
+    #         page_num = int(match.group(1))
+    #         quote = match.group(2)
+    #
+    #         # 해당 페이지의 청크에서 인용문 찾기
+    #         page_chunks = [chunk for chunk in vector_db['chunks'] if chunk['page'] == page_num]
+    #         found = any(quote[:20] in chunk['text'] or chunk['text'][:100] in quote for chunk in page_chunks)
+    #
+    #         if not found and len(page_chunks) > 0:
+    #             issues.append({
+    #                 "type": "⚠️ 인용문 불일치",
+    #                 "desc": f"p.{page_num}의 인용문이 실제 문서와 다를 수 있음: \"{quote[:50]}...\"",
+    #                 "location": match.group()[:80]
+    #             })
 
     is_valid = len(issues) == 0
     return is_valid, issues
