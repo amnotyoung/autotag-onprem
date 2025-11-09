@@ -131,15 +131,12 @@ def create_vector_db(chunks: List[Dict], batch_size: int = 32) -> Dict:
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i+batch_size]
         batch_emb = embedder.encode(
-            batch, 
+            batch,
             show_progress_bar=False,
-            device='cuda',
+            device='cpu',
             batch_size=batch_size
         )
         all_embeddings.append(batch_emb)
-        
-        if i % 128 == 0 and i > 0:
-            torch.cuda.empty_cache()
     
     embeddings = np.vstack(all_embeddings) if len(all_embeddings) > 1 else all_embeddings[0]
     
