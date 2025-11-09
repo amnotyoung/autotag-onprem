@@ -84,6 +84,58 @@ def track_time(func):
         return result
     return wrapper
 
+
+def generate_with_validation(
+    messages: List[Dict],
+    vector_db: Optional[Dict] = None,
+    max_retries: int = 2,
+    max_tokens: int = 6000
+) -> str:
+    """검증 + 재생성 루프: 검증 실패 시 자동으로 재생성"""
+
+    for attempt in range(max_retries + 1):
+        print(f"  🔄 생성 시도 {attempt + 1}/{max_retries + 1}")
+
+        response = llm.create_chat_completion(
+            messages=messages,
+            max_tokens=max_tokens,
+            temperature=0.3,
+            top_p=0.95,
+            top_k=50,
+            repeat_penalty=1.1,
+            stop=["[질문]", "[구체적]", "[페이지]", "[금액]", "[조직]", "[담당]"]
+        )
+
+        output = response['choices'][0]['message']['content']
+        output = comprehensive_post_processing(output, "검증대상")
+
+        # 검증
+        is_valid, issues = validate_analysis_logic(output, vector_db)
+
+        if is_valid:
+            print(f"  ✅ 검증 통과!")
+            return output
+        else:
+            # 검증 실패 - 경고 출력
+            warnings = "\n".join([f"    - {i['type']}: {i['desc']}" for i in issues])
+            print(f"  ⚠️ 검증 실패 (시도 {attempt + 1}):\n{warnings}")
+
+            if attempt < max_retries:
+                # 재시도 - 이전 오류 정보를 프롬프트에 추가
+                error_feedback = "\n\n🚨 **이전 시도에서 발견된 오류**:\n"
+                for i, issue in enumerate(issues[:3], 1):  # 최대 3개만
+                    error_feedback += f"{i}. {issue['type']}: {issue['desc']}\n"
+                error_feedback += "\n위 오류를 **반드시 수정**하여 다시 작성하세요."
+
+                # 마지막 user 메시지에 피드백 추가
+                messages[-1]['content'] += error_feedback
+            else:
+                # 최대 재시도 도달 - 그냥 반환
+                print(f"  ⚠️ 최대 재시도 횟수 도달. 검증 실패 상태로 반환합니다.")
+                return output
+
+    return output
+
 # ==============================================
 # RAG 함수들 (v2.9와 동일)
 # ==============================================
@@ -242,7 +294,7 @@ def detect_and_remove_repetition(text: str, min_repeat: int = 3) -> str:
     return text
 
 
-def validate_analysis_logic(analysis_text: str) -> Tuple[bool, List[Dict]]:
+def validate_analysis_logic(analysis_text: str, vector_db: Optional[Dict] = None) -> Tuple[bool, List[Dict]]:
     issues = []
 
     pattern1 = re.finditer(r'답변:\s*✅\s*충분.*?영향도:\s*🔴\s*Critical', analysis_text, re.DOTALL | re.IGNORECASE)
@@ -290,6 +342,40 @@ def validate_analysis_logic(analysis_text: str) -> Tuple[bool, List[Dict]]:
             "desc": f"형식 예시 내용이 출력에 포함됨: {copied_examples[:3]}",
             "location": "multiple"
         })
+
+    # 🔥 담당 기관 검증 (GIZ 같은 엉뚱한 기관 방지)
+    valid_orgs = ["KOICA", "GGGI", "MPI", "DPI", "DRI", "MONRE", "MoNRE", "MPWT", "DHUP", "DWCS", "DOT"]
+    invalid_orgs = ["GIZ", "JICA", "USAID", "World Bank", "ADB", "UNDP"]
+
+    for invalid_org in invalid_orgs:
+        if invalid_org in analysis_text and "담당" in analysis_text:
+            # 담당 기관으로 명시되었는지 확인
+            pattern = re.search(rf'담당[:\s]*{invalid_org}', analysis_text)
+            if pattern:
+                issues.append({
+                    "type": "⚠️ 담당 기관 오류",
+                    "desc": f"'{invalid_org}'는 본 사업의 담당 기관이 아닙니다 (KOICA/GGGI 사업)",
+                    "location": pattern.group()
+                })
+
+    # 🔥 인용문 검증 (vector_db가 있을 때만)
+    if vector_db:
+        # p.[숫자] "[인용문]" 패턴 찾기
+        citation_pattern = re.finditer(r'p\.(\d+)[^\n"]*?"([^"]{10,})"', analysis_text)
+        for match in citation_pattern:
+            page_num = int(match.group(1))
+            quote = match.group(2)
+
+            # 해당 페이지의 청크에서 인용문 찾기
+            page_chunks = [chunk for chunk in vector_db['chunks'] if chunk['page'] == page_num]
+            found = any(quote[:20] in chunk['text'] or chunk['text'][:100] in quote for chunk in page_chunks)
+
+            if not found and len(page_chunks) > 0:
+                issues.append({
+                    "type": "⚠️ 인용문 불일치",
+                    "desc": f"p.{page_num}의 인용문이 실제 문서와 다를 수 있음: \"{quote[:50]}...\"",
+                    "location": match.group()[:80]
+                })
 
     is_valid = len(issues) == 0
     return is_valid, issues
@@ -670,26 +756,16 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 - 모든 이슈와 질문에 대해 권고사항 필수 작성
 - 정량적 데이터가 있으면 반드시 활용 (%, 금액, 인원 등)"""
 
-        response = llm.create_chat_completion(
+        # 검증 + 재생성 루프 사용 (오류 발견 시 자동 재생성)
+        sector_analysis = generate_with_validation(
             messages=[
                 {"role": "system", "content": sector_expert_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=6000,  # 속도와 품질 균형
-            temperature=0.3,
-            top_p=0.95,
-            top_k=50,
-            repeat_penalty=1.1
+            vector_db=vector_db,
+            max_retries=2,
+            max_tokens=6000
         )
-
-        sector_analysis = response['choices'][0]['message']['content']
-        sector_analysis = comprehensive_post_processing(sector_analysis, f"섹터-{primary_sector}")
-
-        # 검증 로직 추가
-        is_valid, issues = validate_analysis_logic(sector_analysis)
-        if not is_valid:
-            warnings = "\n".join([f"  ⚠️ {i['type']}: {i['desc']}" for i in issues])
-            print(f"\n⚠️ 검증 경고:\n{warnings}")
 
     else:
         sector_analysis = f"## {primary_sector} 분야\n\n일반 분야로 섹터 특화 분석 생략."
@@ -791,20 +867,16 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
 - {sector} 섹터 전문성 반영
 - 실제 문서 내용만 사용"""
 
-    response = llm.create_chat_completion(
+    # 검증 + 재생성 루프 사용 (오류 발견 시 자동 재생성)
+    output = generate_with_validation(
         messages=[
             {"role": "system", "content": get_sector_expert_prompt(sector)},
             {"role": "user", "content": user_prompt}
         ],
-        max_tokens=6000,
-        temperature=0.3,
-        top_p=0.95,
-        top_k=50,
-        repeat_penalty=1.1
+        vector_db=vector_db,
+        max_retries=2,
+        max_tokens=6000
     )
-
-    output = response['choices'][0]['message']['content']
-    output = comprehensive_post_processing(output, "섹터권고")
 
     return output
 
