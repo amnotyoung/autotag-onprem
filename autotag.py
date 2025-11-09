@@ -611,15 +611,16 @@ def get_sector_expert_prompt(sector: str) -> str:
 
 ## 2단계: 위험관리 중심 검토 (조력자 역할)
 당신은 **비판자가 아닌 조력자**입니다. 다음 3가지 질문에 답하세요:
-1. **이 사업 계획의 강점은 무엇입니까?**
+
+[1단계] **이 사업 계획의 강점은 무엇입니까?**
    - 잘 설계된 부분, 국제 모범 사례 반영, 혁신적 접근법 등
    - **정량적 데이터** 활용 (%, 금액, 인원, 기간 등)
 
-2. **이 사업이 성공하는 데 방해가 될 잠재적 위험(Risk)은 무엇입니까?**
+[2단계] **이 사업이 성공하는 데 방해가 될 잠재적 위험(Risk)은 무엇입니까?**
    - 논리적 일관성 부족, 실행 가능성 의문, 누락된 중요 사항 등
-   - **위험의 영향도** 평가 (🔴 Critical / 🟡 High / 🟢 Medium)
+   - **위험의 영향도** 평가 (Critical / High / Medium)
 
-3. **각 위험을 예방(Mitigate)하기 위한 구체적 조치는 무엇입니까?**
+[3단계] **각 위험을 예방(Mitigate)하기 위한 구체적 조치는 무엇입니까?**
    - 즉시 조치 + 단기 조치 제시
    - 조치마다 **예산 규모, 담당 기관, 실행 기간** 명시
    - **측정 가능한 개선 목표** 설정 (예: "접근성 30% 향상", "비용 20% 절감")
@@ -705,9 +706,9 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
     if primary_sector in KOICA_SECTORS:
         sector_info = KOICA_SECTORS[primary_sector]
 
-        # 더 많은 컨텍스트 수집 (top_k 증가)
+        # 컨텍스트 수집 (top_k 최적화)
         sector_keywords = " ".join(sector_info["keywords"][:10])
-        context, pages = search_relevant_chunks(sector_keywords, vector_db, top_k=15)
+        context, pages = search_relevant_chunks(sector_keywords, vector_db, top_k=12)
 
         sector_expert_prompt = get_sector_expert_prompt(primary_sector)
 
@@ -735,17 +736,17 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 
 **각 이슈별로 다음 3단계로 작성**:
 
-### 1️⃣ 강점 파악
+### [1단계] 강점 파악
 - **현황**: 문서에서 발견한 실제 내용 (페이지 번호 + 인용)
 - **강점**: 이 계획에서 잘 설계된 부분 (국제 모범 사례, 혁신적 접근 등)
-- **평가**: ✅ 우수 / ⚠️ 보통 / ❌ 미흡
+- **평가**: 우수 / 보통 / 미흡
 
-### 2️⃣ 위험 요인 파악
+### [2단계] 위험 요인 파악
 - **위험**: 사업 성공을 방해할 잠재적 위험 요인 (3개)
-- **영향도**: 🔴 Critical / 🟡 High / 🟢 Medium
+- **영향도**: Critical / High / Medium
 - **예상 영향**: 구체적인 시나리오 (기간, 금액, 범위)
 
-### 3️⃣ 위험 예방 조치
+### [3단계] 위험 예방 조치
 - **즉시 조치**: [구체적 조치] - 예산 [금액] - 담당 [조직] - 기간 [X주/개월]
 - **단기 조치**: [구체적 조치] - 예산 [금액] - 담당 [조직] - 기간 [X개월]
 
@@ -757,15 +758,15 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
 
 **각 질문별로 다음 3단계로 작성**:
 
-### 1️⃣ 계획 내용 확인
-- **답변**: ✅ 충분 / ⚠️ 부분적 / ❌ 없음
+### [1단계] 계획 내용 확인
+- **답변**: 충분 / 부분적 / 없음
 - **근거**: p.[실제 페이지]에서 "[문서의 실제 인용문]" 명시
 
-### 2️⃣ 위험 요인
+### [2단계] 위험 요인
 - **위험**: 이 부분에서 발견한 잠재적 위험 (3개)
-- **영향도**: 🔴 Critical / 🟡 High / 🟢 Medium
+- **영향도**: Critical / High / Medium
 
-### 3️⃣ 예방 조치
+### [3단계] 예방 조치
 - **권고사항**: 즉시/단기/중기 조치 (구체적 예산, 담당, 기간 포함)
 
 ---
@@ -829,7 +830,7 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
 
 ⚠️ **중요**: 이 문서는 "사업 계획서"입니다. "~할 것이다"는 목표이지 문제가 아닙니다!
 
-## 🔴 Critical 우선순위 위험 (3개)
+## [Critical] 우선순위 위험 (3개)
 
 각 위험별로 다음 형식으로 작성:
 
@@ -845,7 +846,7 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
 
 ---
 
-## 🟡 High 우선순위 위험 (3개)
+## [High] 우선순위 위험 (3개)
 
 각 위험별로 다음 형식으로 작성:
 
@@ -859,36 +860,36 @@ def multi_agent_recommendations(vector_db: Dict, extracted_info: str, analysis: 
 
 ---
 
-## 💬 {sector} 전문가 종합 의견
+## {sector} 전문가 종합 의견
 
-### 📌 핵심 메시지 (3줄)
+### 핵심 메시지 (3줄)
 1. [섹터 관점의 핵심 메시지 1]
 2. [섹터 관점의 핵심 메시지 2]
 3. [섹터 관점의 핵심 메시지 3]
 
-### 📊 문서 품질 평가
+### 문서 품질 평가
 - **점수**: [X]/100점
 - **강점**: [2개]
 - **약점**: [3개]
 - **개선 필요**: [우선순위 3개]
 
-### ⚡ 최우선 조치 (3개)
+### 최우선 조치 (3개)
 1. **[조치명]** - 기간: [X주/개월] - 예산: [금액] - 이유: [왜 최우선인지 1줄 설명]
 2. **[조치명]** - 기간: [X주/개월] - 예산: [금액] - 이유: [1줄 설명]
 3. **[조치명]** - 기간: [X주/개월] - 예산: [금액] - 이유: [1줄 설명]
 
-### 🌍 {sector} 섹터 국제 기준 및 모범 사례
+### {sector} 섹터 국제 기준 및 모범 사례
 - [해당 섹터의 국제 표준, SDGs 목표, 모범 사례 등 언급]
 - [이 사업이 국제 기준과 어떻게 부합/불일치하는지]
 
 ---
 
-🚨 **절대 금지**:
+**절대 금지**:
 - [질문], [구체적], [페이지], [금액] 등 플레이스홀더 사용
 - 근거 없는 주장 (반드시 페이지 + 인용 포함)
 - 형식 예시 내용 복사
 
-✅ **필수**:
+**필수**:
 - 모든 권고사항에 예산, 담당, 기간 포함
 - 측정 가능한 목표 설정
 - {sector} 섹터 전문성 반영
