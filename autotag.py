@@ -46,7 +46,7 @@ model_path = hf_hub_download(
 print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=4096,        # 16384→4096: 추론 속도 대폭 향상
+    n_ctx=8192,        # 프롬프트 수용 + 속도 균형
     n_gpu_layers=-1,
     n_batch=512,
     n_threads=4,
