@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 가상 환경
+koica-env/
+venv/
+env/
+ENV/
+
+# 모델 파일 (매우 큼)
+models/
+*.gguf
+*.bin
+*.safetensors
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그 및 임시 파일
+*.log
+*.tmp
+*.temp
+
+# 업로드된 PDF 파일
+uploads/
+*.pdf
+
+# Gradio 캐시
+gradio_cached_examples/
+
+# PyTorch
+*.pth
+*.pt
+
+# Hugging Face 캐시
+.cache/
+.huggingface/
