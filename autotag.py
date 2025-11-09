@@ -47,7 +47,7 @@ model_path = hf_hub_download(
 print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=16384,       # Context window 확장 (8192→16384) - 섹터 전문가 빡센 검토 지원
+    n_ctx=8192,        # Context window 최적화 - 속도와 품질 균형
     n_gpu_layers=-1,
     n_batch=512,
     n_threads=4,
@@ -617,10 +617,10 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
         user_prompt = f"""**섹터**: {primary_sector}
 
 **사업 정보**:
-{extracted_info[:1500]}
+{extracted_info[:1000]}
 
 **참고 문서** (p.{', '.join(map(str, pages))}):
-{context[:6500]}
+{context[:4500]}
 
 ---
 
@@ -675,7 +675,7 @@ def multi_agent_analysis(vector_db: Dict, extracted_info: str, text: str) -> Tup
                 {"role": "system", "content": sector_expert_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            max_tokens=8000,  # 더 긴 출력 허용
+            max_tokens=6000,  # 속도와 품질 균형
             temperature=0.3,
             top_p=0.95,
             top_k=50,
