@@ -56,14 +56,13 @@ else:
 print(f"🔄 LLM 초기화 중... (모델: {os.path.basename(model_path)})")
 llm = Llama(
     model_path=model_path,
-    n_ctx=8192,        # LLaMA 2: 4096 기본, RoPE scaling으로 8192까지 확장
-    n_gpu_layers=-1,
-    n_batch=512,
-    n_threads=4,
-    use_mlock=True,
+    n_ctx=4096,        # LLaMA 2 기본 컨텍스트 (안정성 우선)
+    n_gpu_layers=-1,   # 모든 레이어를 GPU에 로드
+    n_batch=256,       # 배치 크기 감소 (메모리 절약)
+    n_threads=2,       # 스레드 감소 (GPU 사용 시 낮은 값 권장)
     verbose=False
 )
-print("✅ LLM 준비 완료! (LLaMA 2 70B Chat)\n")
+print("✅ LLM 준비 완료! (LLaMA 2 70B Chat, 4K context)\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
