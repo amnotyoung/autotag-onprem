@@ -1,5 +1,5 @@
 # ==============================================
-# KOICA TAG v4.0 - 섹터 전문가 집중
+# KOICA TAG v4.0 - 섹터 전문가 집중 + LLaMA 2 70B
 # ==============================================
 #
 # 🔥 v4.0 주요 변경:
@@ -8,6 +8,7 @@
 # 3. 처리 속도 대폭 향상 → Agent 부담 감소로 약 5~6배 빠름
 # 4. 검토 품질 강화 → 섹터 전문성에 집중한 심층 분석
 # 5. AI 정신 차림 → 한 번에 하나의 역할만 수행
+# 6. LLaMA 2 70B Chat → 대형 모델로 분석 품질 극대화 (40GB VRAM 권장)
 # ==============================================
 
 import torch
@@ -36,25 +37,25 @@ import pdfplumber
 import numpy as np
 import pandas as pd
 
-print("📥 Mistral Small 22B 다운로드 중...")
+print("📥 LLaMA 2 70B Chat 다운로드 중 (40GB VRAM 권장)...")
 
 model_path = hf_hub_download(
-    repo_id="bartowski/Mistral-Small-Instruct-2409-GGUF",
-    filename="Mistral-Small-Instruct-2409-Q4_K_M.gguf",
+    repo_id="TheBloke/Llama-2-70B-Chat-GGUF",
+    filename="llama-2-70b-chat.Q4_K_M.gguf",
     local_dir="./models"
 )
 
 print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=12288,       # Context window 증가 - 완전한 출력 보장
+    n_ctx=8192,        # LLaMA 2: 4096 기본, RoPE scaling으로 8192까지 확장
     n_gpu_layers=-1,
     n_batch=512,
     n_threads=4,
     use_mlock=True,
     verbose=False
 )
-print("✅ LLM 준비 완료!\n")
+print("✅ LLM 준비 완료! (LLaMA 2 70B Chat)\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
