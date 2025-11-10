@@ -37,15 +37,23 @@ import pdfplumber
 import numpy as np
 import pandas as pd
 
-print("📥 LLaMA 2 70B Chat 다운로드 중 (40GB VRAM 권장)...")
+print("📥 LLaMA 2 70B Chat 준비 중...")
 
-# local_dir 제거 - 기본 캐시 경로 사용 (절대 경로 반환)
-model_path = hf_hub_download(
-    repo_id="TheBloke/Llama-2-70B-Chat-GGUF",
-    filename="llama-2-70b-chat.Q4_K_M.gguf"
-)
+# 이미 다운로드된 파일이 있는지 확인 (재다운로드 방지)
+import os
+local_model_path = "./models/llama-2-70b-chat.Q4_K_M.gguf"
 
-print(f"🔄 LLM 초기화 중... (모델 경로: {model_path})")
+if os.path.exists(local_model_path):
+    print(f"✅ 기존 모델 파일 발견! (재다운로드 생략)")
+    model_path = os.path.abspath(local_model_path)
+else:
+    print("⏳ 모델 다운로드 중... (첫 실행 시 ~41GB, 약 10-20분 소요)")
+    model_path = hf_hub_download(
+        repo_id="TheBloke/Llama-2-70B-Chat-GGUF",
+        filename="llama-2-70b-chat.Q4_K_M.gguf"
+    )
+
+print(f"🔄 LLM 초기화 중... (모델: {os.path.basename(model_path)})")
 llm = Llama(
     model_path=model_path,
     n_ctx=8192,        # LLaMA 2: 4096 기본, RoPE scaling으로 8192까지 확장
