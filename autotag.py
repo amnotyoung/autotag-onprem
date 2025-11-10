@@ -39,13 +39,13 @@ import pandas as pd
 
 print("📥 LLaMA 2 70B Chat 다운로드 중 (40GB VRAM 권장)...")
 
+# local_dir 제거 - 기본 캐시 경로 사용 (절대 경로 반환)
 model_path = hf_hub_download(
     repo_id="TheBloke/Llama-2-70B-Chat-GGUF",
-    filename="llama-2-70b-chat.Q4_K_M.gguf",
-    local_dir="./models"
+    filename="llama-2-70b-chat.Q4_K_M.gguf"
 )
 
-print("🔄 LLM 초기화 중...")
+print(f"🔄 LLM 초기화 중... (모델 경로: {model_path})")
 llm = Llama(
     model_path=model_path,
     n_ctx=8192,        # LLaMA 2: 4096 기본, RoPE scaling으로 8192까지 확장
