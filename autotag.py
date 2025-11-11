@@ -1,5 +1,5 @@
 # ==============================================
-# KOICA TAG v4.0 - 섹터 전문가 집중 + LLaMA 2 70B
+# KOICA TAG v4.0 - 섹터 전문가 집중 + Qwen2.5 32B
 # ==============================================
 #
 # 🔥 v4.0 주요 변경:
@@ -8,7 +8,7 @@
 # 3. 처리 속도 대폭 향상 → Agent 부담 감소로 약 5~6배 빠름
 # 4. 검토 품질 강화 → 섹터 전문성에 집중한 심층 분석
 # 5. AI 정신 차림 → 한 번에 하나의 역할만 수행
-# 6. LLaMA 2 70B Chat → 대형 모델로 분석 품질 극대화 (40GB VRAM 권장)
+# 6. Qwen2.5 32B → 최신 모델, 우수한 성능, 빠른 속도 (A100 40GB 최적)
 # ==============================================
 
 import torch
@@ -37,33 +37,23 @@ import pdfplumber
 import numpy as np
 import pandas as pd
 
-print("📥 LLaMA 2 70B Chat 준비 중...")
+print("📥 Qwen2.5 32B 다운로드 중...")
 
-# 이미 다운로드된 파일이 있는지 확인 (재다운로드 방지)
-import os
-local_model_path = "./models/llama-2-70b-chat.Q4_K_M.gguf"
+model_path = hf_hub_download(
+    repo_id="Qwen/Qwen2.5-32B-Instruct-GGUF",
+    filename="qwen2.5-32b-instruct-q4_k_m.gguf"
+)
 
-if os.path.exists(local_model_path):
-    print(f"✅ 기존 모델 파일 발견! (재다운로드 생략)")
-    model_path = os.path.abspath(local_model_path)
-else:
-    print("⏳ 모델 다운로드 중... (첫 실행 시 ~41GB, 약 10-20분 소요)")
-    model_path = hf_hub_download(
-        repo_id="TheBloke/Llama-2-70B-Chat-GGUF",
-        filename="llama-2-70b-chat.Q4_K_M.gguf"
-    )
-
-print(f"🔄 LLM 초기화 중... (모델: {os.path.basename(model_path)})")
-print(f"   메모리 최적화: CPU 위주 하이브리드 (큰 Context 확보)")
+print("🔄 LLM 초기화 중...")
 llm = Llama(
     model_path=model_path,
-    n_ctx=10240,       # Context 대폭 증가 (프롬프트 수용)
-    n_gpu_layers=10,   # GPU 레이어 최소화 (VRAM 절약)
-    n_batch=128,
-    n_threads=8,       # CPU 스레드 증가 (성능 보완)
+    n_ctx=16384,       # Qwen2.5: 128K context 지원 (16K로 설정)
+    n_gpu_layers=-1,   # 모든 레이어를 GPU에 로드 (32B는 A100 40GB에 적합)
+    n_batch=512,
+    n_threads=4,
     verbose=False
 )
-print("✅ LLM 준비 완료! (LLaMA 2 70B Chat, CPU-heavy hybrid, 10K context)\n")
+print("✅ LLM 준비 완료! (Qwen2.5 32B Instruct)\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
