@@ -388,19 +388,20 @@ def validate_analysis_logic(analysis_text: str, vector_db: Optional[Dict] = None
                 context = analysis_text[context_start:context_end]
 
                 # 따옴표로 묶인 키워드만 추출 (더 정확한 검증)
-                quoted_keywords = re.findall(r'["\']([^"\']{5,50})["\']', context)
+                quoted_keywords = re.findall(r'["\']([^"\']{10,})["\']', context)
 
                 if quoted_keywords:
-                    # 키워드가 실제 페이지(±2페이지 범위)에 있는지 확인
-                    nearby_pages = [chunk for chunk in vector_db['chunks']
-                                   if abs(chunk['page'] - page_num) <= 2]
-                    nearby_text = ' '.join([chunk['text'] for chunk in nearby_pages])
+                    # 키워드가 실제 페이지(정확히 그 페이지)에 있는지 확인
+                    # ±2 범위는 너무 관대함 → ±0으로 강화
+                    exact_page_text = ' '.join([chunk['text'] for chunk in page_chunks])
 
-                    for keyword in quoted_keywords[:3]:  # 최대 3개만 검증
-                        if keyword not in nearby_text and len(keyword) > 10:
+                    for keyword in quoted_keywords[:2]:  # 최대 2개만 검증 (성능)
+                        # 최소 10자 이상의 키워드만 검증
+                        if len(keyword) >= 10 and keyword not in exact_page_text:
+                            # 정확한 페이지에 없으면 에러
                             issues.append({
                                 "type": "⚠️ 인용문 불일치",
-                                "desc": f"p.{page_num} 근처에서 '{keyword[:30]}...'를 찾을 수 없음",
+                                "desc": f"p.{page_num}에서 '{keyword[:40]}...'를 찾을 수 없습니다. 다른 페이지를 확인하세요.",
                                 "location": f"p.{page_num}"
                             })
 
