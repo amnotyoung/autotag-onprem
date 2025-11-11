@@ -357,24 +357,51 @@ def validate_analysis_logic(analysis_text: str, vector_db: Optional[Dict] = None
                     "location": pattern.group()
                 })
 
-    # 🔥 인용문 검증 (비활성화 - 너무 엄격함)
-    # if vector_db:
-    #     # p.[숫자] "[인용문]" 패턴 찾기
-    #     citation_pattern = re.finditer(r'p\.(\d+)[^\n"]*?"([^"]{10,})"', analysis_text)
-    #     for match in citation_pattern:
-    #         page_num = int(match.group(1))
-    #         quote = match.group(2)
-    #
-    #         # 해당 페이지의 청크에서 인용문 찾기
-    #         page_chunks = [chunk for chunk in vector_db['chunks'] if chunk['page'] == page_num]
-    #         found = any(quote[:20] in chunk['text'] or chunk['text'][:100] in quote for chunk in page_chunks)
-    #
-    #         if not found and len(page_chunks) > 0:
-    #             issues.append({
-    #                 "type": "⚠️ 인용문 불일치",
-    #                 "desc": f"p.{page_num}의 인용문이 실제 문서와 다를 수 있음: \"{quote[:50]}...\"",
-    #                 "location": match.group()[:80]
-    #             })
+    # 🔥 페이지 번호 검증 (재활성화 - 근거 날조 방지)
+    if vector_db:
+        # p.[숫자] 패턴 모두 찾기 (인용문 유무 무관)
+        page_refs = re.finditer(r'p\.(\d+)', analysis_text)
+        checked_pages = set()
+
+        for match in page_refs:
+            page_num = int(match.group(1))
+
+            # 이미 체크한 페이지는 스킵
+            if page_num in checked_pages:
+                continue
+            checked_pages.add(page_num)
+
+            # 해당 페이지가 문서에 존재하는지 확인
+            page_chunks = [chunk for chunk in vector_db['chunks'] if chunk['page'] == page_num]
+
+            if len(page_chunks) == 0:
+                issues.append({
+                    "type": "⚠️ 페이지 번호 오류",
+                    "desc": f"p.{page_num}은 문서에 존재하지 않습니다 (전체: {max([c['page'] for c in vector_db['chunks']])}페이지)",
+                    "location": f"p.{page_num}"
+                })
+            else:
+                # 해당 페이지 근처 문맥에서 언급된 키워드 추출
+                context_start = max(0, match.start() - 100)
+                context_end = min(len(analysis_text), match.end() + 200)
+                context = analysis_text[context_start:context_end]
+
+                # 따옴표로 묶인 키워드만 추출 (더 정확한 검증)
+                quoted_keywords = re.findall(r'["\']([^"\']{5,50})["\']', context)
+
+                if quoted_keywords:
+                    # 키워드가 실제 페이지(±2페이지 범위)에 있는지 확인
+                    nearby_pages = [chunk for chunk in vector_db['chunks']
+                                   if abs(chunk['page'] - page_num) <= 2]
+                    nearby_text = ' '.join([chunk['text'] for chunk in nearby_pages])
+
+                    for keyword in quoted_keywords[:3]:  # 최대 3개만 검증
+                        if keyword not in nearby_text and len(keyword) > 10:
+                            issues.append({
+                                "type": "⚠️ 인용문 불일치",
+                                "desc": f"p.{page_num} 근처에서 '{keyword[:30]}...'를 찾을 수 없음",
+                                "location": f"p.{page_num}"
+                            })
 
     is_valid = len(issues) == 0
     return is_valid, issues
