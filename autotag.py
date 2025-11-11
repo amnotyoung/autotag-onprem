@@ -45,13 +45,14 @@ model_path = hf_hub_download(
 )
 
 print("🔄 LLM 초기화 중...")
+print(f"   모델 경로: {model_path}")
 llm = Llama(
     model_path=model_path,
-    n_ctx=16384,       # Qwen2.5: 128K context 지원 (16K로 설정)
-    n_gpu_layers=-1,   # 모든 레이어를 GPU에 로드 (32B는 A100 40GB에 적합)
+    n_ctx=8192,        # Context 축소 (메모리 절약)
+    n_gpu_layers=60,   # GPU 레이어 제한 (32B 모델은 약 80 레이어)
     n_batch=512,
     n_threads=4,
-    verbose=False
+    verbose=True       # 디버깅 정보 출력
 )
 print("✅ LLM 준비 완료! (Qwen2.5 32B Instruct)\n")
 
