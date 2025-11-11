@@ -54,15 +54,16 @@ else:
     )
 
 print(f"🔄 LLM 초기화 중... (모델: {os.path.basename(model_path)})")
+print(f"   메모리 최적화: GPU 레이어 제한 + 배치 크기 축소")
 llm = Llama(
     model_path=model_path,
-    n_ctx=4096,        # LLaMA 2 기본 컨텍스트 (안정성 우선)
-    n_gpu_layers=-1,   # 모든 레이어를 GPU에 로드
-    n_batch=256,       # 배치 크기 감소 (메모리 절약)
-    n_threads=2,       # 스레드 감소 (GPU 사용 시 낮은 값 권장)
-    verbose=False
+    n_ctx=4096,        # LLaMA 2 기본 컨텍스트
+    n_gpu_layers=40,   # GPU 레이어 제한 (40GB VRAM 대응)
+    n_batch=128,       # 배치 크기 대폭 축소
+    n_threads=2,
+    verbose=True       # 디버깅 정보 출력
 )
-print("✅ LLM 준비 완료! (LLaMA 2 70B Chat, 4K context)\n")
+print("✅ LLM 준비 완료! (LLaMA 2 70B Chat, 4K context, GPU layers: 40)\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
