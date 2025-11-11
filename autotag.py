@@ -54,16 +54,16 @@ else:
     )
 
 print(f"🔄 LLM 초기화 중... (모델: {os.path.basename(model_path)})")
-print(f"   메모리 최적화: GPU/CPU 하이브리드 모드 (VRAM 절약)")
+print(f"   메모리 최적화: CPU 위주 하이브리드 (큰 Context 확보)")
 llm = Llama(
     model_path=model_path,
-    n_ctx=2048,        # 컨텍스트 축소 (메모리 절약)
-    n_gpu_layers=20,   # GPU 레이어 대폭 축소 (나머지는 CPU)
+    n_ctx=10240,       # Context 대폭 증가 (프롬프트 수용)
+    n_gpu_layers=10,   # GPU 레이어 최소화 (VRAM 절약)
     n_batch=128,
-    n_threads=4,       # CPU 레이어용 스레드 증가
-    verbose=False      # verbose 비활성화
+    n_threads=8,       # CPU 스레드 증가 (성능 보완)
+    verbose=False
 )
-print("✅ LLM 준비 완료! (LLaMA 2 70B Chat, GPU/CPU hybrid, 2K context)\n")
+print("✅ LLM 준비 완료! (LLaMA 2 70B Chat, CPU-heavy hybrid, 10K context)\n")
 
 print("🔄 한국어 임베딩 모델 로딩...")
 try:
